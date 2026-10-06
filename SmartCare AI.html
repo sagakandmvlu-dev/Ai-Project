@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SmartCare AI – Hospital Triage & Emergency Routing</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;800&display=swap">
+<style>
+:root{--bg:#f2f7f6;--card:#fff;--ink:#0e2a2f;--mute:#4f6b70;--line:#d3e2e0;--pulse:#1b998b;--sig:#e5383b;--amb:#f4a259;--road:#c5d6d4;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0b1c20;--card:#12292e;--ink:#e6f2f0;--mute:#9db7b4;--line:#244249;--road:#2c4b52;--pulse:#3cc9b8}}
+:root[data-theme="dark"]{--bg:#0b1c20;--card:#12292e;--ink:#e6f2f0;--mute:#9db7b4;--line:#244249;--road:#2c4b52;--pulse:#3cc9b8}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Bricolage Grotesque",system-ui,sans-serif;line-height:1.55}
+.w{max-width:1040px;margin:0 auto;padding:0 20px}
+header.top{display:flex;justify-content:space-between;align-items:center;padding:18px 0}
+.logo{font-weight:800;font-size:1.15rem;display:flex;gap:8px;align-items:center}
+.logo i{width:14px;height:14px;border-radius:50%;background:var(--sig);box-shadow:0 0 0 0 var(--sig);animation:p 1.6s infinite}
+@keyframes p{70%{box-shadow:0 0 0 12px transparent}100%{box-shadow:0 0 0 0 transparent}}
+@media (prefers-reduced-motion:reduce){.logo i{animation:none}}
+nav a{color:var(--mute);text-decoration:none;margin-left:16px;font-size:.92rem}
+nav a:hover,nav a:focus-visible{color:var(--ink);outline:none;text-decoration:underline}
+h1{font-size:clamp(2rem,5.5vw,3.6rem);line-height:1.05;margin:.3em 0 .2em;font-weight:800;letter-spacing:-.02em;max-width:15ch}
+h2{font-size:1.6rem;margin:0 0 .3em;letter-spacing:-.01em}
+.lead{color:var(--mute);max-width:56ch;margin:0 0 20px}
+section{padding:44px 0;border-top:1px solid var(--line)}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px}
+.tabs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+button,.chip{font:inherit;cursor:pointer;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:8px 14px;border-radius:999px}
+button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+button:focus-visible,input:focus-visible{outline:3px solid var(--pulse);outline-offset:2px}
+svg{width:100%;height:auto;display:block}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}
+.stats div{border-left:3px solid var(--pulse);padding-left:10px}
+.stats b{font-size:1.5rem;display:block}
+.stats span{color:var(--mute);font-size:.85rem}
+#pathTxt{margin:10px 0 0;color:var(--mute);font-size:.92rem;overflow-wrap:anywhere}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media (max-width:760px){.grid2{grid-template-columns:1fr}.stats b{font-size:1.15rem}}
+label.chk{display:flex;gap:10px;align-items:center;padding:8px 0;cursor:pointer}
+input[type=checkbox]{width:20px;height:20px;accent-color:var(--pulse)}
+.out{font-weight:600;padding:14px;border-radius:10px;margin-top:10px;background:var(--bg);border-left:6px solid var(--pulse)}
+.out.crit{border-color:var(--sig)}.out.mod{border-color:var(--amb)}
+.row{display:grid;grid-template-columns:130px 1fr 52px;gap:10px;align-items:center;margin:10px 0;font-size:.92rem}
+input[type=range]{width:100%;accent-color:var(--pulse)}
+.big{font-size:2.6rem;font-weight:800;line-height:1}
+.bar{height:12px;border-radius:6px;background:var(--line);overflow:hidden;margin-top:8px}
+.bar i{display:block;height:100%;background:var(--sig);transition:width .25s}
+.mods{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px}
+.mods div{border-top:3px solid var(--pulse);padding-top:8px}
+.mods b{display:block}.mods span{color:var(--mute);font-size:.9rem}
+.tbl{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:480px}
+th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line)}
+th{color:var(--mute);font-weight:600;font-size:.85rem}
+tr.best td{font-weight:800}
+footer{padding:28px 0 40px;color:var(--mute);font-size:.9rem;border-top:1px solid var(--line)}
+</style>
+</head>
+<body>
+<div class="w">
+<header class="top"><div class="logo"><i></i>SmartCare AI</div>
+<nav><a href="#route">Routing</a><a href="#agent">Triage</a><a href="#bayes">Bayes</a><a href="#ml">Models</a><a href="#bias">Fairness</a></nav></header>
+
+<main>
+<section id="route" style="border:0;padding-top:20px">
+<h1>Get the ambulance there faster.</h1>
+<p class="lead">SmartCare AI triages patients and plans the ambulance route to the hospital. Pick a search algorithm and watch how each one chooses a road.</p>
+<div class="panel">
+<div class="tabs" id="tabs" role="group" aria-label="Search algorithm"></div>
+<svg id="map" viewBox="0 0 700 400" role="img" aria-label="City road map with highlighted ambulance route"></svg>
+<div class="stats"><div><b id="sCost">–</b><span>distance (km)</span></div><div><b id="sNodes">–</b><span>cities explored</span></div><div><b id="sStops">–</b><span>stops</span></div></div>
+<p id="pathTxt"></p>
+</div>
+</section>
+
+<section id="agent">
+<h2>Triage agent</h2>
+<p class="lead">A table-driven agent reads what the nurse sees (percepts) and looks up the right action.</p>
+<div class="panel grid2">
+<div><label class="chk"><input type="checkbox" id="c1"> Chest pain</label>
+<label class="chk"><input type="checkbox" id="c2"> Low oxygen (SpO2 below 90)</label>
+<label class="chk"><input type="checkbox" id="c3"> High fever</label>
+<label class="chk"><input type="checkbox" id="c4"> Cough</label></div>
+<div><div class="out" id="agentOut"></div>
+<p style="color:var(--mute);font-size:.88rem;margin:10px 0 0">PEAS: performance is the correct urgency level; the environment is a partially observable, stochastic, sequential emergency room.</p></div>
+</div>
+</section>
+
+<section id="bayes">
+<h2>Why a positive test is not a diagnosis</h2>
+<p class="lead">Bayes' rule combines how rare a disease is with how reliable the test is. Move the sliders.</p>
+<div class="panel grid2">
+<div>
+<div class="row"><span>Disease rate</span><input type="range" id="b1" min="0.1" max="50" step="0.1" value="1"><b id="v1"></b></div>
+<div class="row"><span>Test catches it</span><input type="range" id="b2" min="50" max="100" step="1" value="99"><b id="v2"></b></div>
+<div class="row"><span>False alarms</span><input type="range" id="b3" min="0" max="30" step="1" value="5"><b id="v3"></b></div>
+</div>
+<div><span style="color:var(--mute)">Chance the patient really has the disease</span><div class="big" id="post"></div><div class="bar"><i id="postBar"></i></div></div>
+</div>
+</section>
+
+<section id="ml">
+<h2>Urgency models</h2>
+<p class="lead">Four classifiers trained on 2,000 patient records (75/25 split, missing values filled with the median, features scaled).</p>
+<div class="panel tbl"><table>
+<thead><tr><th>Model</th><th>Test accuracy</th><th>Recall</th><th>F1</th><th>ROC-AUC</th></tr></thead>
+<tbody>
+<tr class="best"><td>Logistic Regression</td><td>81.4%</td><td>0.54</td><td>0.61</td><td>0.85</td></tr>
+<tr><td>Naive Bayes</td><td>76.2%</td><td>0.44</td><td>0.50</td><td>0.81</td></tr>
+<tr><td>Decision Tree</td><td>78.8%</td><td>0.44</td><td>0.53</td><td>0.77</td></tr>
+<tr><td>kNN (k=7)</td><td>75.6%</td><td>0.41</td><td>0.48</td><td>0.74</td></tr>
+</tbody></table></div>
+<p class="lead" style="margin-top:12px">5-fold cross-validation for Logistic Regression averages 82.0% accuracy.</p>
+</section>
+
+<section id="bias">
+<h2>Fairness check</h2>
+<div class="grid2">
+<div><p class="lead">The data is 74% male, so the model sees fewer female patients. We compared how many truly urgent patients each group had caught.</p>
+<p class="lead">Balancing class weights raised overall recall from 0.54 to 0.75. An AI triage tool should support clinicians, protect privacy and be audited by group.</p></div>
+<div class="panel">
+<div class="row" style="grid-template-columns:70px 1fr 48px"><span>Male</span><div class="bar"><i style="width:50%;background:var(--pulse)"></i></div><b>0.50</b></div>
+<div class="row" style="grid-template-columns:70px 1fr 48px"><span>Female</span><div class="bar"><i style="width:63.9%;background:var(--pulse)"></i></div><b>0.64</b></div>
+<span style="color:var(--mute);font-size:.88rem">Recall by group. The gap is 0.14, above the 0.10 review threshold.</span></div>
+</div>
+</section>
+
+<section id="mods">
+<h2>What is inside</h2>
+<div class="mods">
+<div><b>Intelligent agents</b><span>PEAS, environment types, table-driven agent</span></div>
+<div><b>Search</b><span>BFS, DFS, UCS, Greedy, A*</span></div>
+<div><b>Probability</b><span>Bayes' rule, Naive Bayes, Bayesian network with pgmpy</span></div>
+<div><b>Machine learning</b><span>Classification, k-fold, tuning, regression</span></div>
+<div><b>Ethics</b><span>Imbalance, parity, equal opportunity, mitigation</span></div>
+</div>
+</section>
+</main>
+<footer>SmartCare AI, a TYIT AI mini project by Sagar Kandari (T010). Patient data is synthetic.</footer>
+</div>
+
+<script>
+const C={Andheri:[2,8],Bandra:[3,5],Dadar:[5,4],Kurla:[7,6],Powai:[8,9],Worli:[4,2],Colaba:[5,0],Sion:[6,3],Thane:[11,8],Chembur:[9,4],Hospital:[10,1]};
+const R=[["Andheri","Bandra",3.5],["Andheri","Powai",7],["Bandra","Dadar",3],["Bandra","Worli",3.3],["Dadar","Kurla",3],["Dadar","Sion",1.6],["Worli","Colaba",2.5],["Worli","Sion",2.9],["Kurla","Powai",3.5],["Kurla","Chembur",2.9],["Powai","Thane",4],["Thane","Chembur",4.5],["Sion","Chembur",3.5],["Sion","Hospital",5],["Chembur","Hospital",3.2],["Colaba","Hospital",5.5]];
+const G={};Object.keys(C).forEach(k=>G[k]=[]);R.forEach(([a,b,w])=>{G[a].push([b,w]);G[b].push([a,w])});
+const S="Andheri",T="Hospital";
+const h=(a)=>Math.hypot(C[a][0]-C[T][0],C[a][1]-C[T][1]);
+const cost=p=>p.slice(1).reduce((s,n,i)=>s+G[p[i]].find(e=>e[0]===n)[1],0);
+// generic best-first / uninformed search: pri(path,g) decides order; mode picks queue behaviour
+function search(kind){
+  let fr=[{p:[S],g:0}],seen=new Set(),n=0;
+  while(fr.length){
+    let i=0;
+    if(kind==="BFS")i=0;
+    else if(kind==="DFS")i=fr.length-1;
+    else{const f=x=>kind==="UCS"?x.g:kind==="Greedy"?h(x.p.at(-1)):x.g+h(x.p.at(-1));
+      fr.forEach((x,j)=>{if(f(x)<f(fr[i]))i=j})}
+    const cur=fr.splice(i,1)[0],node=cur.p.at(-1);
+    if(seen.has(node))continue;seen.add(node);n++;
+    if(node===T)return{p:cur.p,n};
+    let nb=G[node].filter(e=>!seen.has(e[0]));
+    if(kind==="DFS")nb=nb.slice().reverse();
+    nb.forEach(([m,w])=>fr.push({p:[...cur.p,m],g:cur.g+w}));
+  }
+}
+const names={BFS:"BFS",DFS:"DFS",UCS:"UCS",Greedy:"Greedy",Astar:"A*"};
+const tabs=document.getElementById("tabs"),svg=document.getElementById("map");
+const X=x=>50+(x-1)*60,Y=y=>370-y*38;
+function draw(k){
+  const r=search(k==="Astar"?"A*":k),on=new Set();r.p.slice(1).forEach((n,i)=>on.add(r.p[i]+"|"+n).add(n+"|"+r.p[i]));
+  let s="";
+  R.forEach(([a,b,w])=>{const hot=on.has(a+"|"+b);
+    s+=`<line x1="${X(C[a][0])}" y1="${Y(C[a][1])}" x2="${X(C[b][0])}" y2="${Y(C[b][1])}" stroke="${hot?"var(--sig)":"var(--road)"}" stroke-width="${hot?6:3}" stroke-linecap="round"/>`;
+    if(hot)s+=`<text x="${(X(C[a][0])+X(C[b][0]))/2}" y="${(Y(C[a][1])+Y(C[b][1]))/2-8}" font-size="13" fill="var(--ink)" text-anchor="middle" font-weight="600">${w}</text>`});
+  Object.entries(C).forEach(([c,[x,y]])=>{const e=c===T,st=c===S,v=r.p.includes(c);
+    s+=`<circle cx="${X(x)}" cy="${Y(y)}" r="${e?11:7}" fill="${e?"var(--sig)":st?"var(--pulse)":v?"var(--ink)":"var(--card)"}" stroke="var(--ink)" stroke-width="2"/>`;
+    s+=`<text x="${X(x)+13}" y="${Y(y)+4}" font-size="13" fill="var(--ink)">${c}</text>`});
+  svg.innerHTML=s;
+  const c=cost(r.p);
+  sCost.textContent=c.toFixed(1);sNodes.textContent=r.n;sStops.textContent=r.p.length-1;
+  pathTxt.textContent=r.p.join(" → ");
+  [...tabs.children].forEach(b=>b.setAttribute("aria-pressed",b.dataset.k===k));
+}
+Object.entries(names).forEach(([k,l])=>{const b=document.createElement("button");b.textContent=l;b.dataset.k=k;b.onclick=()=>draw(k);tabs.appendChild(b)});
+draw("Astar");
+
+// triage agent
+const ids=["c1","c2","c3","c4"].map(i=>document.getElementById(i));
+function agent(){
+  const [cp,sp,fv,co]=ids.map(x=>x.checked),o=document.getElementById("agentOut");
+  let t,cl="";
+  if(cp){t="Critical: call the ambulance and alert the cardiologist";cl="crit"}
+  else if(sp){t="Critical: give oxygen and alert the doctor";cl="crit"}
+  else if(fv&&co){t="Urgent: isolate the patient and test for infection";cl="mod"}
+  else if(fv){t="Moderate: give an antipyretic and observe";cl="mod"}
+  else if(co){t="Mild: send to general OPD"}
+  else t="Routine: regular check-up";
+  o.textContent=t;o.className="out "+cl;
+}
+ids.forEach(x=>x.onchange=agent);agent();
+
+// Bayes
+const bs=["b1","b2","b3"].map(i=>document.getElementById(i));
+function bayes(){
+  const [p,s,f]=bs.map(x=>+x.value/100);
+  v1.textContent=(p*100).toFixed(1)+"%";v2.textContent=Math.round(s*100)+"%";v3.textContent=Math.round(f*100)+"%";
+  const r=s*p/(s*p+f*(1-p)),pc=(r*100);
+  post.textContent=pc.toFixed(1)+"%";postBar.style.width=pc+"%";
+}
+bs.forEach(x=>x.oninput=bayes);bayes();
+</script>
+</body>
+</html>
